@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 公司/组织表
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  industry  String?
+  size      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("companies")
+}
+
+// 用户表
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  name         String
+  role         String  @default("MANAGER") // MANAGER, HR, ADMIN
+  level        String  @default("JUNIOR") // JUNIOR, MIDDLE, SENIOR
+  department   String?
+  avatarUrl    String? @map("avatar_url")
+  dailyLimit   Int?    @default(10) @map("daily_limit") // 每日训练限额
+  isActive     Boolean @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  companyId String?  @map("company_id")
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  sessions  DialogueSession[]
+  reports   EvaluationReport[]
+  templates MultiAgentTemplate[]
+  menuItems MenuItem[]
+
+  @@map("users")
+}
+
+// 功能栏管理表
+model MenuItem {
+  id        String   @id @default(uuid())
+  name      String   // 功能名称
+  key       String   // 功能键值
+  isVisible Boolean  @default(true) // 是否可见
+  order     Int      @default(0) // 排序
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("menu_items")
+}
+
+// 剧本表
+model Scenario {
+  id                  String  @id @default(uuid())
+  title               String
+  description         String?
+  category            String  // PERFORMANCE, TERMINATION, CONFLICT, EMOTIONAL, PROMOTION, FEEDBACK
+  difficulty          String  // BEGINNER, INTERMEDIATE, ADVANCED
+  background          String  // JSON string
+  aiCharacter         String  @map("ai_character") // JSON string
+  evaluationDimensions String @map("evaluation_dimensions") // JSON string
+  estimatedDuration   Int?    @map("estimated_duration")
+  isActive            Boolean @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  sessions DialogueSession[]
+  reports  EvaluationReport[]
+
+  @@map("scenarios")
+}
+
+// 对话会话表
+model DialogueSession {
+  id              String   @id @default(uuid())
+  status          String   @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED, ABANDONED
+  metadata        String   @default("{}") // JSON string
+  realtimeMetrics String?  @map("realtime_metrics") // JSON string
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  scenarioId String?  @map("scenario_id")
+  scenario   Scenario? @relation(fields: [scenarioId], references: [id])
+
+  messages Message[]
+  report   EvaluationReport?
+
+  @@map("dialogue_sessions")
+}
+
+// 消息表
+model Message {
+  id              String   @id @default(uuid())
+  role            String   // USER, ASSISTANT, SYSTEM
+  content         String
+  type            String   @default("TEXT") // TEXT, VOICE
+  emotionAnalysis String?  @map("emotion_analysis") // JSON string
+  voiceUrl        String?  @map("voice_url")
+  metadata        String?  @default("{}") // JSON string for agent info
+  timestamp       DateTime @default(now())
+
+  sessionId String          @map("session_id")
+  session   DialogueSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// 评估报告表
+model EvaluationReport {
+  id              String   @id @default(uuid())
+  overallScore    Int?     @map("overall_score")
+  dimensionScores String   @map("dimension_scores") // JSON string
+  analysis        String   // JSON string
+  wordCloud       String?  @map("word_cloud") // JSON string
+  suggestions     String   // JSON string
+  comparisonData  String?  @map("comparison_data") // JSON string
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  sessionId String          @unique @map("session_id")
+  session   DialogueSession @relation(fields: [sessionId], references: [id])
+  userId    String          @map("user_id")
+  user      User            @relation(fields: [userId], references: [id])
+  scenarioId String         @map("scenario_id")
+  scenario  Scenario        @relation(fields: [scenarioId], references: [id])
+
+  @@map("evaluation_reports")
+}
+
+// 多智能体对话模板表
+model MultiAgentTemplate {
+  id          String   @id @default(uuid())
+  name        String   // 模板名称
+  description String?  // 模板描述
+  topic       String   // 对话主题
+  agents      String   // JSON string，存储智能体配置
+  isPublic    Boolean  @default(false) @map("is_public") // 是否公开
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("multi_agent_templates")
+}

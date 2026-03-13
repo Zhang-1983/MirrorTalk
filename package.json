@@ -1,0 +1,26 @@
+{
+  "name": "mirroetalk",
+  "version": "0.1.0",
+  "description": "管理者高难度沟通虚拟沙盘",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "cd apps/api && prisma generate",
+    "db:migrate": "cd apps/api && prisma migrate dev",
+    "db:studio": "cd apps/api && prisma studio"
+  },
+  "devDependencies": {
+    "turbo": "^1.11.0",
+    "@types/node": "^20.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

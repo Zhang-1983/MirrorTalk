@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试前端API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <h1>前端API测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 测试健康检查</h2>
+        <button onclick="testHealth()">测试</button>
+        <div id="health-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 测试登录</h2>
+        <button onclick="testLogin()">测试</button>
+        <div id="login-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 测试获取用户列表</h2>
+        <button onclick="testGetUsers()">测试</button>
+        <div id="users-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. 测试删除用户</h2>
+        <button onclick="testDeleteUser()">测试</button>
+        <div id="delete-result" class="result"></div>
+    </div>
+
+    <script>
+        let authToken = '';
+        
+        async function testHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                document.getElementById('health-result').innerHTML = 
+                    '<div class="success">成功: ' + JSON.stringify(data, null, 2) + '</div>';
+            } catch (error) {
+                document.getElementById('health-result').innerHTML = 
+                    '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: 'admin123'
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    authToken = data.data.token;
+                    document.getElementById('login-result').innerHTML = 
+                        '<div class="success">成功: ' + JSON.stringify(data, null, 2) + '</div>';
+                } else {
+                    document.getElementById('login-result').innerHTML = 
+                        '<div class="error">失败: ' + JSON.stringify(data, null, 2) + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('login-result').innerHTML = 
+                    '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+        
+        async function testGetUsers() {
+            if (!authToken) {
+                document.getElementById('users-result').innerHTML = 
+                    '<div class="error">请先登录</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('users-result').innerHTML = 
+                        '<div class="success">成功: ' + JSON.stringify(data, null, 2) + '</div>';
+                } else {
+                    document.getElementById('users-result').innerHTML = 
+                        '<div class="error">失败: ' + JSON.stringify(data, null, 2) + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('users-result').innerHTML = 
+                    '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+        
+        async function testDeleteUser() {
+            if (!authToken) {
+                document.getElementById('delete-result').innerHTML = 
+                    '<div class="error">请先登录</div>';
+                return;
+            }
+            
+            // 获取用户列表
+            try {
+                const usersResponse = await fetch('/api/users', {
+                    headers: {
+                        'Authorization': 'Bearer ' + authToken
+                    }
+                });
+                const usersData = await usersResponse.json();
+                
+                if (usersData.success && usersData.data.length > 0) {
+                    const userId = usersData.data[0].id;
+                    
+                    try {
+                        const response = await fetch('/api/users/' + userId, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': 'Bearer ' + authToken
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            document.getElementById('delete-result').innerHTML = 
+                                '<div class="success">成功: ' + JSON.stringify(data, null, 2) + '</div>';
+                        } else {
+                            document.getElementById('delete-result').innerHTML = 
+                                '<div class="error">失败: ' + JSON.stringify(data, null, 2) + '</div>';
+                        }
+                    } catch (error) {
+                        document.getElementById('delete-result').innerHTML = 
+                            '<div class="error">错误: ' + error.message + '</div>';
+                    }
+                } else {
+                    document.getElementById('delete-result').innerHTML = 
+                        '<div class="error">没有可删除的用户</div>';
+                }
+            } catch (error) {
+                document.getElementById('delete-result').innerHTML = 
+                    '<div class="error">错误: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>
